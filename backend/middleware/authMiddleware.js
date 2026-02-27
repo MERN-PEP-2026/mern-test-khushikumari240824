@@ -1,16 +1,24 @@
-const Course = require("../models/Course");
+const jwt = require("jsonwebtoken");
 
-exports.createCourse = async (req, res) => {
-  const course = await Course.create(req.body);
-  res.json(course);
+const authMiddleware = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({ message: "Authorization token is required" });
+    }
+
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.student = { id: decoded.id };
+
+    return next();
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
 };
 
-exports.getCourses = async (req, res) => {
-  const courses = await Course.find();
-  res.json(courses);
-};
-
-exports.deleteCourse = async (req, res) => {
-  await Course.findByIdAndDelete(req.params.id);
-  res.json({ message: "Course deleted" });
-};
+module.exports = authMiddleware;
